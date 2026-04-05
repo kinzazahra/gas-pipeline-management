@@ -1,29 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { HardHat, Activity, CheckCircle2, Clock, RefreshCcw } from 'lucide-react';
+import { HardHat, Activity, CheckCircle2, Clock, RefreshCcw, UserCircle, Calendar } from 'lucide-react';
 
 const EmployeeDashboard = () => {
   const [assignedProjects, setAssignedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Get user info from localStorage
   const userRole = localStorage.getItem('pipelineRole');
   const userId = localStorage.getItem('pipelineUserId');
+  const userName = localStorage.getItem('pipelineUserName') || 'Site Manager';
 
   const fetchMyProjects = async () => {
     try {
       setLoading(true);
+      // Added cache-busting timestamp to ensure fresh data after Admin edits
       const res = await axios.get(`http://localhost:5000/api/projects/all?t=${Date.now()}`);
       
-      console.log("Logged in User ID:", userId);
-      console.log("Raw Projects from Server:", res.data);
+      console.log("Logged-in ID from LocalStorage:", userId);
 
       if (userRole === 'manager' && userId) {
-        // THE FIX: We convert both sides to String to ensure they match correctly
         const myWork = res.data.filter(p => {
+          // Check for ID in multiple possible locations (populated object or raw string)
           const projectManagerId = p.projectManager?._id || p.projectManager;
-          
-          // Debugging log - check your F12 console to see if these match!
-          console.log(`Comparing Project Manager ${projectManagerId} to User ${userId}`);
           
           return String(projectManagerId) === String(userId);
         });
@@ -41,11 +40,11 @@ const EmployeeDashboard = () => {
   };
 
   useEffect(() => { 
-    if (!userId) {
+    if (userId) {
+      fetchMyProjects(); 
+    } else {
       setLoading(false);
-      return;
     }
-    fetchMyProjects(); 
   }, [userId]);
 
   const updateProgress = async (id, newProgress) => {
@@ -81,13 +80,15 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 space-y-8">
-      {/* Welcome Header */}
+      {/* Personalized Welcome Header */}
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2 capitalize">
-            <HardHat className="text-orange-500" /> {userRole} Portal
+            <UserCircle className="text-orange-500" /> Welcome, {userName}
           </h1>
-          <p className="text-slate-500 mt-1">Direct field reporting and pipeline status updates</p>
+          <p className="text-slate-500 mt-1 font-medium italic text-sm text-transform: capitalize">
+            Site Authority Level: {userRole}
+          </p>
         </div>
         <div className="text-right">
           <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Status</div>
@@ -97,7 +98,6 @@ const EmployeeDashboard = () => {
         </div>
       </div>
 
-      {/* Project Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {assignedProjects.length > 0 ? assignedProjects.map((project) => (
           <div key={project._id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all">
@@ -115,7 +115,30 @@ const EmployeeDashboard = () => {
                   <option value="Completed">Completed</option>
                 </select>
               </div>
-              <p className="text-sm text-slate-500 mb-6 line-clamp-2">{project.description}</p>
+              
+              <p className="text-sm text-slate-500 mb-4 line-clamp-2">{project.description}</p>
+
+              {/* Added Timeline Section to show Admin Edits */}
+              <div className="grid grid-cols-2 gap-2 mb-6 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Calendar size={12} className="text-slate-400"/>
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 uppercase">Start</p>
+                    <p className="text-[10px] font-bold text-slate-600">
+                      {project.timeline?.startDate ? new Date(project.timeline.startDate).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 border-l border-slate-200 pl-2">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 uppercase">Deadline</p>
+                    <p className="text-[10px] font-bold text-red-600">
+                      {project.timeline?.deadline ? new Date(project.timeline.deadline).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
               
               <div className="space-y-3 font-sans">
                 <div className="flex justify-between text-xs font-bold text-slate-600">
@@ -128,7 +151,6 @@ const EmployeeDashboard = () => {
                     style={{ width: `${project.progressPercentage}%` }}
                   ></div>
                 </div>
-                
                 {userRole === 'manager' && (
                   <input 
                     type="range" 
@@ -139,7 +161,6 @@ const EmployeeDashboard = () => {
                 )}
               </div>
             </div>
-            
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-around text-slate-400">
               <button className="hover:text-blue-600 flex items-center gap-1 text-xs font-bold"><Activity size={14}/> Stats</button>
               <button className="hover:text-green-600 flex items-center gap-1 text-xs font-bold"><CheckCircle2 size={14}/> Report</button>
@@ -148,8 +169,7 @@ const EmployeeDashboard = () => {
           </div>
         )) : (
           <div className="col-span-full py-20 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 font-sans">
-             <p className="text-slate-400 font-medium tracking-tight">No pipeline projects assigned to your command yet.</p>
-             <p className="text-[10px] text-slate-300 mt-2">Verified ID: {userId}</p>
+             <p className="text-slate-400 font-medium tracking-tight">No projects assigned to your command ID ({userId || 'Not Found'}).</p>
           </div>
         )}
       </div>
