@@ -148,10 +148,22 @@ const AdminDashboard = () => {
                   </select>
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <select value={user.status || 'Active'} onChange={e => handleUpdateUser(user._id, 'status', e.target.value)} className="text-[10px] font-black uppercase border rounded-full px-3 py-1 bg-white">
-                    <option value="Active">Active</option><option value="Inactive">Inactive</option>
-                  </select>
-                </td>
+  <div className="relative inline-block">
+    <select 
+      value={user.status || 'Active'} 
+      onChange={(e) => handleUpdateUser(user._id, 'status', e.target.value)}
+      className={`appearance-none text-[10px] font-black uppercase border rounded-full px-4 py-1 outline-none transition-all duration-300 cursor-pointer text-center ${
+        user.status === 'Inactive' 
+          ? 'bg-red-100 text-red-700 border-red-200' 
+          : 'bg-green-100 text-green-800 border-green-200'
+      }`}
+      style={{ minWidth: '80px' }}
+    >
+      <option value="Active" className="bg-white text-slate-800">Active</option>
+      <option value="Inactive" className="bg-white text-slate-800">Inactive</option>
+    </select>
+  </div>
+</td>
                 <td className="px-6 py-4 text-right"><button onClick={() => handleDeleteUser(user._id)} className="text-slate-300 hover:text-red-600"><Trash2 size={18}/></button></td>
               </tr>
             ))}
